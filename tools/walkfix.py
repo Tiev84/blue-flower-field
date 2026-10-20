@@ -28,6 +28,16 @@ for b, k in [('hips', 0.12), ('spine', 0.12), ('chest', 0.25), ('neck', 0.3), ('
 for s in 'LR':
     for b in ['thigh', 'shin', 'foot', 'toe']:
         d['q'][b + s] = [twist_x(q) for q in d['q'][b + s]]
+# bring the feet in towards the centre line (she was walking in two tracks):
+# tilt each thigh inwards and level the foot again
+def mul(a, b):
+    ax, ay, az, aw = a; bx, by, bz, bw = b
+    return [aw * bx + ax * bw + ay * bz - az * by, aw * by - ax * bz + ay * bw + az * bx, aw * bz + ax * by - ay * bx + az * bw, aw * bw - ax * bx - ay * by - az * bz]
+def rz(t): return [0.0, 0.0, math.sin(t / 2), math.cos(t / 2)]
+ADD = float(sys.argv[3]) if len(sys.argv) > 3 else 0.06
+for s_, sign in (('L', -1), ('R', 1)):
+    d['q']['thigh' + s_] = [mul(rz(sign * ADD), q) for q in d['q']['thigh' + s_]]
+    d['q']['foot' + s_] = [mul(rz(-sign * ADD), q) for q in d['q']['foot' + s_]]
 d['q'] = {k: [[round(v, 5) for v in q] for q in qs] for k, qs in d['q'].items()}
-d['note'] = 'walkfix: legs swing forward/back only; torso sway damped; right arm mirrored from the left'
+d['note'] = 'walkfix: legs swing forward/back only, feet brought in; torso sway damped; right arm mirrored from the left'
 json.dump(d, open(dst, 'w'), separators=(',', ':'))

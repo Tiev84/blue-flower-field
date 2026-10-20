@@ -47,7 +47,7 @@ export async function createCats(scene, gltf, center) {
   // [model, size, size axis, facing of the model (radians, 0 = +z), meow pitch, name]
   const defs = [
     { obj: normalise(munch.scene, 1.15, 'xz'), face: 0, rate: 1.0, name: 'Ba Màu' },
-    { obj: normalise(fig.scene, 1.0, 'xz'), face: -Math.PI / 2, rate: 1.18, name: 'Vàng' },
+    { obj: normalise(fig.scene, 0.78, 'xz'), face: -Math.PI / 2, rate: 1.18, name: 'Vàng' },
     { obj: normalise(mx, 0.95, 'xz'), face: 0, rate: 0.88, name: 'Đen' },
   ];
   const heartTex = heartTexture();
