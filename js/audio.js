@@ -1,15 +1,36 @@
 // Sounds: the meow sample (pitched per cat), a soft breeze with the odd
 // bird, and a little music-box melody for the ending. Web Audio only starts
 // after the Start tap (iOS needs a gesture).
-export class Audio {
-  constructor() { this.ctx = null; this.muted = false; this.meow = null; }
+// half a second of silence as a WAV file (used to unlock audio on iOS)
+function silentWav() {
+  const n = 4000, b = new Uint8Array(44 + n), v = new DataView(b.buffer);
+  const w = (o, s) => [...s].forEach((c, i) => { b[o + i] = c.charCodeAt(0); });
+  w(0, 'RIFF'); v.setUint32(4, 36 + n, true); w(8, 'WAVE'); w(12, 'fmt '); v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true);
+  v.setUint32(24, 8000, true); v.setUint32(28, 8000, true); v.setUint16(32, 1, true); v.setUint16(34, 8, true); w(36, 'data'); v.setUint32(40, n, true);
+  b.fill(128, 44);
+  return URL.createObjectURL(new Blob([b], { type: 'audio/wav' }));
+}
 
+export class Audio {
+  constructor() { this.ctx = null; this.muted = false; this.meow = null; this.meowEl = null; }
+
+  // call straight from the Start tap: iOS only opens audio inside a user gesture
   async start() {
     if (this.ctx) return;
+    // play through the ring/silent switch like a video would
+    try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch (_) { /* ignore */ }
+    try { const el = new window.Audio(silentWav()); el.loop = true; el.volume = 0.01; el.setAttribute('playsinline', ''); el.play().catch(() => {}); this.keepAlive = el; } catch (_) { /* ignore */ }
+    try { this.meowEl = new window.Audio('sounds/meow.mp3'); this.meowEl.preload = 'auto'; this.meowEl.load(); } catch (_) { /* ignore */ }
     const AC = window.AudioContext || window.webkitAudioContext;
     if (!AC) return;
     this.ctx = new AC();
-    if (this.ctx.state === 'suspended') await this.ctx.resume();
+    // a one-sample sound inside the gesture unlocks Web Audio on older iOS
+    const b = this.ctx.createBuffer(1, 1, 22050), src = this.ctx.createBufferSource(); src.buffer = b; src.connect(this.ctx.destination); src.start(0);
+    this.ctx.resume().catch(() => {});
+    // iOS suspends audio after calls, Siri or locking the phone: resume on the next touch
+    const wake = () => { if (this.ctx && this.ctx.state !== 'running') this.ctx.resume().catch(() => {}); if (this.keepAlive && this.keepAlive.paused) this.keepAlive.play().catch(() => {}); };
+    for (const ev of ['pointerdown', 'touchend', 'keydown']) addEventListener(ev, wake, { passive: true });
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) wake(); });
     this.master = this.ctx.createGain(); this.master.gain.value = 0.9; this.master.connect(this.ctx.destination);
     this.verb = this.makeReverb();
     this.verb.connect(this.master);
@@ -37,7 +58,13 @@ export class Audio {
   }
 
   playMeow(rate = 1) {
-    if (!this.ctx || !this.meow) return;
+    if (this.muted) return;
+    if (!this.ctx || !this.meow || this.ctx.state !== 'running') {
+      // fall back to a plain audio element
+      if (this.meowEl) { const e = this.meowEl.cloneNode(); e.playbackRate = rate; e.preservesPitch = false; e.webkitPreservesPitch = false; e.play().catch(() => {}); }
+      if (this.ctx) this.ctx.resume().catch(() => {});
+      return;
+    }
     const s = this.ctx.createBufferSource(); s.buffer = this.meow; s.playbackRate.value = rate;
     const g = this.ctx.createGain(); g.gain.value = 0.9;
     s.connect(g); g.connect(this.master); g.connect(this.verb.input);

@@ -49,7 +49,7 @@ function rugTexture() {
 }
 
 export async function createHouse(scene, loader) {
-  const [house, door] = await Promise.all([loader.loadAsync('models/house.glb'), loader.loadAsync('models/door.glb')]);
+  const house = await loader.loadAsync('models/house.glb');
   const root = new THREE.Group(); scene.add(root);
 
   // exterior shell (walls, roof, window boxes, garden) in one group
@@ -63,23 +63,39 @@ export async function createHouse(scene, loader) {
   });
   root.add(shell);
 
-  // the door swings out on a hinge at its left edge
-  const hinge = new THREE.Group(); hinge.position.set(DOOR.x0, 0, DOOR.zFront); root.add(hinge);
-  const d = door.scene; d.scale.setScalar(S); d.position.set(-ORIGIN.x * S - DOOR.x0, -ORIGIN.y * S + LIFT, -ORIGIN.z * S - DOOR.zFront);
-  d.traverse((o) => { if (o.isMesh) { o.material.roughness = 0.9; o.material.color.set(o.geometry.attributes.position.count > 300 ? '#d8b25a' : '#a8683f'); o.castShadow = true; } });
-  hinge.add(d);
-
-  // a warm glow fills the doorway once the door is open
-  const glowMat = new THREE.ShaderMaterial({
-    transparent: true, depthWrite: false, uniforms: { open: { value: 0 } },
+  // the doorway is a door of light: walk into it to go inside
+  const portalMat = new THREE.ShaderMaterial({
+    uniforms: { time: { value: 0 } },
     vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.); }',
-    fragmentShader: `uniform float open; varying vec2 vUv;
-      void main(){ vec3 c = mix(vec3(0.55,0.32,0.18), vec3(1.0,0.86,0.6), smoothstep(0.0, 0.9, vUv.y) * 0.6 + 0.25);
-        c += vec3(1.0,0.9,0.7) * smoothstep(0.6, 0.0, length(vUv - vec2(0.5, 0.35))) * 0.35;
-        gl_FragColor = vec4(c, open); }`,
+    fragmentShader: `uniform float time; varying vec2 vUv;
+      void main(){
+        vec2 p = vUv - vec2(0.5, 0.42);
+        float r = length(p * vec2(1.0, 0.7));
+        float a = atan(p.y, p.x);
+        float rays = 0.5 + 0.5 * sin(a * 9.0 + time * 0.8) * sin(a * 5.0 - time * 1.3);
+        float core = smoothstep(0.75, 0.0, r);
+        vec3 edge = vec3(0.62, 0.8, 1.0), mid = vec3(1.0, 0.93, 0.78), hot = vec3(1.0, 1.0, 0.97);
+        vec3 c = mix(edge, mid, smoothstep(0.65, 0.2, r));
+        c = mix(c, hot, core * core);
+        c += vec3(1.0, 0.95, 0.85) * rays * core * 0.25;
+        c *= 0.92 + 0.08 * sin(time * 2.0 + vUv.y * 6.0);
+        gl_FragColor = vec4(c, 1.0);
+      }`,
   });
-  const glow = new THREE.Mesh(new THREE.PlaneGeometry(DOOR.x1 - DOOR.x0, DOOR.top - LIFT), glowMat);
-  glow.position.set(DOOR_X, (DOOR.top + LIFT) / 2, DOOR.zBack + 0.01); root.add(glow);
+  const glow = new THREE.Mesh(new THREE.PlaneGeometry(DOOR.x1 - DOOR.x0, DOOR.top - LIFT), portalMat);
+  glow.position.set(DOOR_X, (DOOR.top + LIFT) / 2, DOOR.zBack + 0.02); root.add(glow);
+  // a soft halo spilling out of the doorway
+  const hc = document.createElement('canvas'); hc.width = hc.height = 128; const hg = hc.getContext('2d');
+  const grd = hg.createRadialGradient(64, 70, 4, 64, 70, 64); grd.addColorStop(0, 'rgba(255,248,225,0.9)'); grd.addColorStop(0.5, 'rgba(210,230,255,0.35)'); grd.addColorStop(1, 'rgba(200,225,255,0)');
+  hg.fillStyle = grd; hg.fillRect(0, 0, 128, 128);
+  const haloMat = new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(hc), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending });
+  const halo = new THREE.Mesh(new THREE.PlaneGeometry((DOOR.x1 - DOOR.x0) * 2.2, (DOOR.top - LIFT) * 1.7), haloMat);
+  halo.position.set(DOOR_X, (DOOR.top + LIFT) / 2, DOOR.zFront + 0.25); root.add(halo);
+  const sparkG = new THREE.BufferGeometry(); const SP = 40; const sp = new Float32Array(SP * 3); const seeds = Array.from({ length: SP }, () => Math.random());
+  sparkG.setAttribute('position', new THREE.BufferAttribute(sp, 3));
+  const sparks = new THREE.Points(sparkG, new THREE.PointsMaterial({ color: '#fff6dc', size: 0.07, transparent: true, opacity: 0.9, depthWrite: false, blending: THREE.AdditiveBlending }));
+  sparks.frustumCulled = false; root.add(sparks);
+  const portalLight = new THREE.PointLight('#fff1d6', 2.5, 7, 1.5); portalLight.position.set(DOOR_X, 1.6, DOOR.zFront + 0.8); root.add(portalLight);
 
   // ---------------------------------------------------------------- interior
   // the inside of the walls is a copy of the wall shell drawn from inside,
@@ -128,7 +144,7 @@ export async function createHouse(scene, loader) {
   const rug = new THREE.Mesh(new THREE.CircleGeometry(2.0, 48), new THREE.MeshLambertMaterial({ map: rugTexture() }));
   rug.rotation.x = -Math.PI / 2; rug.position.set(CENTER.x, ROOM.floor + 0.01, CENTER.z); rug.receiveShadow = true; interior.add(rug);
   // a bright doorway on the inside of the front wall
-  const exitMat = new THREE.MeshBasicMaterial({ color: '#fff7e0' });
+  const exitMat = portalMat;
   const exit = new THREE.Mesh(new THREE.PlaneGeometry(DOOR.x1 - DOOR.x0 - 0.1, DOOR.top - LIFT - 0.05), exitMat);
   exit.position.set(DOOR_X, (DOOR.top + LIFT) / 2, ROOM.z1 - 0.02); exit.rotation.y = Math.PI; interior.add(exit);
   const frameMat = new THREE.MeshLambertMaterial({ color: '#9b6a43' });
@@ -161,7 +177,7 @@ export async function createHouse(scene, loader) {
     [WALL.x0, WALL.z0, WALL.x1, WALL.z1 - 0.01, 'body'],
   ];
   const doorGap = [DOOR.x0 + 0.05, DOOR.x1 - 0.05];
-  const state = { open: 0, inside: false };
+  const state = { open: 1, inside: false };
 
   function collide(p, r) {
     // keep the girl out of the walls, except through the open doorway
@@ -189,15 +205,19 @@ export async function createHouse(scene, loader) {
   }
 
   function update(dt, player) {
-    const near = Math.hypot(player.x - DOOR_X, player.z - DOOR_FRONT) < 4.2 || state.inside;
-    state.open += ((near ? 1 : 0) - state.open) * Math.min(1, dt * 3);
-    hinge.rotation.y = -state.open * 1.75;
-    glowMat.uniforms.open.value = Math.min(1, state.open * 1.2);
+    portalMat.uniforms.time.value += dt;
+    const a = sparkG.attributes.position, t = portalMat.uniforms.time.value;
+    for (let i = 0; i < SP; i++) {
+      const s0 = seeds[i], life = (t * (0.15 + s0 * 0.2) + s0) % 1;
+      a.setXYZ(i, DOOR.x0 + 0.1 + (DOOR.x1 - DOOR.x0 - 0.2) * ((s0 * 7.3) % 1) + Math.sin(t + i) * 0.05, LIFT + life * (DOOR.top - LIFT), DOOR.zBack + 0.1 + ((s0 * 3.1) % 1) * 0.6);
+    }
+    a.needsUpdate = true;
+    halo.material.opacity = 0.85 + Math.sin(t * 1.7) * 0.15;
     // crossing the inner face of the doorway switches between outside and in
     const wasInside = state.inside;
     if (!state.inside && player.z < ROOM.z1 - 0.05 && player.x > ROOM.x0 && player.x < ROOM.x1) state.inside = true;
     else if (state.inside && player.z > ROOM.z1 + 0.05) state.inside = false;
-    if (wasInside !== state.inside) { interior.visible = state.inside; glow.visible = !state.inside; shell.visible = !state.inside; hinge.visible = !state.inside; }
+    if (wasInside !== state.inside) { interior.visible = state.inside; for (const o of [glow, halo, sparks, shell, portalLight]) o.visible = !state.inside; }
     return state.inside !== wasInside;
   }
 

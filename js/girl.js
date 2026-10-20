@@ -394,7 +394,7 @@ export class GirlRig {
     const f = (t - ts[i]) / Math.max(1e-6, ts[i + 1] - ts[i]);
     for (const n of this.names) {
       out[n] = (out[n] || new THREE.Quaternion()).copy(this.q[n][i]).slerp(this.q[n][i + 1], Math.min(1, Math.max(0, f)));
-      const amp = AMP[n] || 1; if (amp !== 1) out[n].copy(_q3.identity().slerp(out[n], amp));
+      const amp = (this.walk.amp === false ? 1 : AMP[n]) || 1; if (amp !== 1) out[n].copy(_q3.identity().slerp(out[n], amp));
     }
     // a bind pose that differs from the capture's (arms hanging instead of
     // out at 34 degrees): local' = conj(Q parent) * local * Q bone
@@ -420,10 +420,12 @@ export class GirlRig {
   }
   update(dt, speed) {
     this.time += dt;
-    const target = Math.min(1, speed / 0.6);
+    // speed < 0 walks backwards (the cycle plays in reverse)
+    const target = Math.min(1, Math.abs(speed) / 0.6);
     this.blend += (target - this.blend) * Math.min(1, dt * 8);
-    const rate = speed > 0.05 ? speed / this.stride : 1;
-    this.phase += dt * Math.max(0.6, rate) * (this.blend > 0.02 ? 1 : 0);
+    let rate = Math.abs(speed) > 0.05 ? speed / this.stride : 1;
+    if (Math.abs(rate) < 0.6) rate = rate < 0 ? -0.6 : 0.6;
+    this.phase += dt * rate * (this.blend > 0.02 ? 1 : 0);
     const pose = this.sample(this.phase, this._pose || (this._pose = {}));
     const br = Math.sin(this.time * 2.2);
     for (const n of this.names) {

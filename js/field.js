@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+import { FLOWER } from './flowershape.js';
 
 // The endless blue flower field: a sky dome with cartoon clouds, a ground
 // that reads as a carpet of flowers in the distance, and instanced flowers
@@ -95,7 +96,7 @@ export function createGround(scene, uniforms) {
         vec2 p = vW.xz;
         float n = vnoise(p * 0.08) * 0.6 + vnoise(p * 0.31) * 0.4;
         vec3 grass = mix(L(0.22, 0.42, 0.18), L(0.34, 0.56, 0.26), vnoise(p * 0.5));
-        vec3 bloom = mix(L(0.27, 0.47, 0.95), L(0.52, 0.7, 1.0), n);
+        vec3 bloom = mix(L(0.16, 0.33, 0.86), L(0.33, 0.52, 0.97), n);
         float d = length(vW.xz - uPlayer.xz);
         // near the player the real flowers stand on green; farther out the ground itself turns into flowers
         float far = smoothstep(uTile * 0.22, uTile * 0.46, d);
@@ -106,7 +107,7 @@ export function createGround(scene, uniforms) {
         float heart = 1.0 - smoothstep(0.05, 0.11, r);
         float fade = smoothstep(5.0, 16.0, d);
         float speck = mix(dot_, 0.7, fade);
-        vec3 petal = mix(bloom, L(0.95, 0.97, 1.0), heart * (1.0 - fade));
+        vec3 petal = mix(bloom, L(0.45, 0.62, 1.0), heart * (1.0 - fade));
         vec3 c = mix(grass, petal, clamp(mix(0.15 + speck * 0.8, 0.86 + n * 0.1, far), 0.0, 1.0));
         // distance haze towards a soft blue, meeting the sky at the horizon
         float patchy = vnoise(p * 0.03) * 0.65 + vnoise(p * 0.11) * 0.35;
@@ -125,43 +126,27 @@ export function createGround(scene, uniforms) {
 
 // ---------------------------------------------------------------- flowers
 function flowerGeometry() {
-  // a nemophila: five rounded, slightly cupped petals with a white heart,
-  // on a thin stem with two leaves. Vertex colours carry the shading.
+  // the bouquet's own bloom (ruffled cup of petals), low-poly and flat shaded,
+  // on a thin stem. The head sits at y = 1 so instances can scale it apart
+  // from the stem; vertex colours carry the shading.
   const pos = [], col = [], nrm = [];
-  const push = (p, c, n) => { pos.push(...p); col.push(...c); nrm.push(...n); };
-  const white = [0.86, 0.93, 1.0], mid = [0.2, 0.44, 1.0], edge = [0.045, 0.17, 0.88], green = [0.07, 0.26, 0.05], dark = [0.03, 0.12, 0.02];
-  const H = 1; // head height is unit; instances scale it
-  const R = 0.36;
-  for (let k = 0; k < 5; k++) {
-    const a0 = (k / 5) * Math.PI * 2;
-    const fan = 2;
-    for (let j = 0; j < fan; j++) {
-      const t0 = a0 - 0.55 + (j / fan) * 1.1, t1 = a0 - 0.55 + ((j + 1) / fan) * 1.1;
-      const rr = (t) => R * (0.75 + 0.25 * Math.cos((t - a0) * 2.6));
-      const P0 = [0, H, 0];
-      const P1 = [Math.cos(t0) * rr(t0), H + rr(t0) * 0.45, Math.sin(t0) * rr(t0)];
-      const P2 = [Math.cos(t1) * rr(t1), H + rr(t1) * 0.45, Math.sin(t1) * rr(t1)];
-      const m0 = [P1[0] * 0.3, H + 0.04, P1[2] * 0.3], m1 = [P2[0] * 0.3, H + 0.04, P2[2] * 0.3];
-      const n = [0, 1, 0];
-      push(P0, white, n); push(m0, white, n); push(m1, white, n);
-      push(m0, mid, n); push(P1, edge, n); push(P2, edge, n);
-      push(m0, mid, n); push(P2, edge, n); push(m1, mid, n);
+  const P = FLOWER.pos, I = FLOWER.idx, S = 0.42;
+  const v = (i) => new THREE.Vector3(P[i * 3] * S, 0.97 + P[i * 3 + 1] * S * 0.85, P[i * 3 + 2] * S);
+  const deep = new THREE.Color(0.012, 0.05, 0.36), mid = new THREE.Color(0.05, 0.17, 0.78), tip = new THREE.Color(0.2, 0.42, 1.0);
+  const c = new THREE.Color();
+  for (let t = 0; t < I.length; t += 3) {
+    const a = v(I[t]), b = v(I[t + 1]), d = v(I[t + 2]);
+    const n = new THREE.Vector3().subVectors(b, a).cross(new THREE.Vector3().subVectors(d, a)).normalize();
+    for (const q of [a, b, d]) {
+      const h = (q.y - 0.97) / (S * 0.85), r = Math.hypot(q.x, q.z) / S;
+      c.copy(deep).lerp(mid, Math.min(1, h * 1.6)).lerp(tip, Math.max(0, Math.min(1, (h - 0.45) * 1.4 + r * 0.25)));
+      pos.push(q.x, q.y, q.z); col.push(c.r, c.g, c.b); nrm.push(n.x, n.y, n.z);
     }
   }
-  // the dark-dotted centre
-  for (let k = 0; k < 5; k++) {
-    const a = (k / 5) * Math.PI * 2, b = ((k + 1) / 5) * Math.PI * 2;
-    push([0, H + 0.05, 0], [0.95, 0.8, 0.3], [0, 1, 0]); push([Math.cos(a) * 0.06, H + 0.04, Math.sin(a) * 0.06], [0.08, 0.09, 0.22], [0, 1, 0]); push([Math.cos(b) * 0.06, H + 0.04, Math.sin(b) * 0.06], [0.08, 0.09, 0.22], [0, 1, 0]);
-  }
-  // face the petals upwards (counter-clockwise seen from above)
-  for (let v = 0; v < pos.length / 3; v += 3) {
-    for (const arr of [pos, col, nrm]) for (let c = 0; c < 3; c++) { const a = (v + 1) * 3 + c, b = (v + 2) * 3 + c; const t = arr[a]; arr[a] = arr[b]; arr[b] = t; }
-  }
-  // stem: two crossed ribbons
+  const green = [0.07, 0.26, 0.05], dark = [0.03, 0.12, 0.02];
   for (const [dx, dz] of [[0.025, 0.012]]) {
-    const q = [[-dx, 0, -dz], [dx, 0, dz], [dx, H, dz], [-dx, H, -dz]];
-    const n = [dz * 40, 0, dx * 40];
-    for (const i of [0, 1, 2, 0, 2, 3]) push(q[i], i < 2 ? dark : green, n);
+    const q = [[-dx, 0, -dz], [dx, 0, dz], [dx, 0.97, dz], [-dx, 0.97, -dz]];
+    for (const i of [0, 1, 2, 0, 2, 3]) { pos.push(...q[i]); col.push(...(i < 2 ? dark : green)); nrm.push(dz * 40, 0, dx * 40); }
   }
   const g = new THREE.BufferGeometry();
   g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
@@ -173,7 +158,7 @@ function flowerGeometry() {
 function farFlowerGeometry() {
   // a cheap distant bloom: a pentagon head on a single ribbon
   const pos = [], col = [], nrm = [];
-  const blue = [0.06, 0.2, 0.9], light = [0.3, 0.55, 1.0], green = [0.05, 0.2, 0.04];
+  const blue = [0.04, 0.13, 0.7], light = [0.15, 0.34, 0.98], green = [0.05, 0.2, 0.04];
   for (let k = 0; k < 5; k++) {
     const a = (k / 5) * Math.PI * 2, b = ((k + 1) / 5) * Math.PI * 2;
     pos.push(0, 1.04, 0, Math.cos(b) * 0.4, 1, Math.sin(b) * 0.4, Math.cos(a) * 0.4, 1, Math.sin(a) * 0.4);
@@ -271,7 +256,7 @@ function instancedMaterial(uniforms, kind, tile = null, ring = null) {
 
 export function createFlowers(scene, uniforms, quality) {
   const tile = uniforms.uTile.value;
-  const flowerCount = quality === 'low' ? 7500 : 14000;
+  const flowerCount = quality === 'low' ? 5200 : 10000;
   const grassCount = quality === 'low' ? 1800 : 3500;
   const fl = new THREE.Mesh(scatter(flowerGeometry(), flowerCount, tile, 11, [0.07, 0.11], [0.2, 0.42]), instancedMaterial(uniforms, 'flower'));
   const gr = new THREE.Mesh(scatter(grassGeometry(), grassCount, tile, 23, [0.6, 1.0], [0.16, 0.3]), instancedMaterial(uniforms, 'grass'));

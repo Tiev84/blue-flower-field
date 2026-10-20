@@ -58,7 +58,7 @@ const input = new Input(renderer.domElement, $('joy'), $('joy-knob'));
 
 const world = {};
 const player = { pos: new THREE.Vector3(0, 0, 30), vel: new THREE.Vector3(), yaw: Math.PI, speed: 0 };
-const cam = { yaw: 0, pitch: innerWidth < innerHeight ? 0.27 : 0.2, dist: innerWidth < innerHeight ? 5.2 : 4.6, target: new THREE.Vector3(), pos: new THREE.Vector3() };
+const cam = { front: false, off: 0, yaw: 0, pitch: innerWidth < innerHeight ? 0.27 : 0.2, dist: innerWidth < innerHeight ? 5.2 : 4.6, target: new THREE.Vector3(), pos: new THREE.Vector3() };
 const game = { state: 'intro', petted: 0, enteredOnce: false, finaleAt: -1, time: 0, ended: false };
 
 async function load() {
@@ -105,8 +105,10 @@ $('start').addEventListener('click', async () => {
   game.state = 'walk';
   audio.start();
   setQuest('Đi theo biển chỉ dẫn', 'Đến ngôi nhà nhỏ cuối con đường 🏡');
-  toast(touch ? 'Kéo bên trái màn hình để đi' : 'Dùng WASD hoặc phím mũi tên để đi', 3200);
+  toast(touch ? 'Kéo bên trái để đi · 🔄 để nhìn mặt Lạc Như' : 'W/S đi · A/D xoay · C để nhìn mặt Lạc Như', 3600);
 });
+function flipView() { cam.front = !cam.front; $('flip').classList.toggle('on', cam.front); }
+$('flip').addEventListener('click', flipView);
 $('mute').addEventListener('click', () => { audio.setMuted(!audio.muted); $('mute').textContent = audio.muted ? '🔇' : '🔊'; });
 $('pet').addEventListener('click', () => { const c = world.cats && world.cats.nearest(player.pos); if (c) petCat(c); });
 $('again').addEventListener('click', () => location.reload());
@@ -192,21 +194,15 @@ function petCat(c) {
 
 // ---------------------------------------------------------------- update
 const raycaster = new THREE.Raycaster();
-const WALK = 1.3, BRISK = 1.9;
+const WALK = 1.35, BRISK = 1.9, BACK = 0.7, TURN = 2.1;
 
 function updatePlayer(dt) {
+  // forward/back walks along her facing, left/right turns her; the camera
+  // stays behind (or in front of) her so her sides are never shown square on
   const ax = game.state === 'intro' ? { x: 0, y: 0, run: false } : input.axes();
-  const fx = -Math.sin(cam.yaw), fz = -Math.cos(cam.yaw), rx = Math.cos(cam.yaw), rz = -Math.sin(cam.yaw);
-  let mx = fx * ax.y + rx * ax.x, mz = fz * ax.y + rz * ax.x;
-  const mag = Math.min(1, Math.hypot(mx, mz));
-  const top = (ax.run ? BRISK : WALK) * mag;
+  player.yaw -= ax.x * TURN * dt * (Math.abs(ax.y) > 0.2 ? 0.8 : 1);
+  const top = ax.y >= 0 ? (ax.run ? BRISK : WALK) * ax.y : BACK * ax.y;
   player.speed += (top - player.speed) * Math.min(1, dt * 6);
-  if (mag > 0.05) {
-    const l = Math.hypot(mx, mz); mx /= l; mz /= l;
-    const want = Math.atan2(mx, mz);
-    let d = want - player.yaw; d = Math.atan2(Math.sin(d), Math.cos(d));
-    player.yaw += d * Math.min(1, dt * 9);
-  }
   const dirx = Math.sin(player.yaw), dirz = Math.cos(player.yaw);
   player.pos.x += dirx * player.speed * dt; player.pos.z += dirz * player.speed * dt;
   const H = world.house;
@@ -232,7 +228,13 @@ function updatePlayer(dt) {
 const _ray = new THREE.Ray(), _hit = new THREE.Vector3(), _box = new THREE.Box3();
 function updateCamera(dt, ev) {
   const inside = world.house && world.house.state.inside;
-  cam.yaw -= ev.look.dx * 0.006; cam.pitch += ev.look.dy * 0.004;
+  // the view is locked to her back (or her face): dragging only nudges it a little
+  cam.off = Math.max(-0.45, Math.min(0.45, (cam.off || 0) - ev.look.dx * 0.004));
+  if (!input.pointers.size) cam.off *= Math.max(0, 1 - dt * 0.8);
+  const wantYaw = player.yaw + (cam.front ? 0 : Math.PI) + cam.off;
+  let dy = wantYaw - cam.yaw; dy = Math.atan2(Math.sin(dy), Math.cos(dy));
+  cam.yaw += dy * (dt > 0 ? Math.min(1, dt * 7) : 1);
+  cam.pitch += ev.look.dy * 0.004;
   cam.pitch = Math.min(1.25, Math.max(inside ? 0.25 : 0.05, cam.pitch));
   cam.dist = Math.min(7.5, Math.max(2.4, cam.dist + ev.zoom * 0.4));
   if (game.state === 'finale' && inside) {
@@ -279,6 +281,7 @@ function updateCamera(dt, ev) {
 }
 
 function handleTaps(ev) {
+  if (ev.pressed.has('KeyC') || ev.pressed.has('KeyF')) flipView();
   if (!world.cats) return;
   if (ev.pressed.has('KeyE') || ev.pressed.has('Space') || ev.pressed.has('Enter')) { const c = world.cats.nearest(player.pos); if (c) petCat(c); }
   for (const t of ev.taps) {
@@ -371,5 +374,6 @@ window.flowerfield = {
   start() { $('start').click(); },
   pet(i) { petCat(world.cats.list[i]); },
   teleport(x, z, yaw) { player.pos.set(x, 0, z); if (yaw !== undefined) { player.yaw = yaw; cam.yaw = yaw + Math.PI; } },
+  flip: () => flipView(),
 };
 void DOOR_X; void DOOR_FRONT; void wasInside;

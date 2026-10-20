@@ -6,8 +6,9 @@ Một game web 3D nhỏ, chơi trên máy tính và điện thoại: cùng Lạc
 **Chơi ngay:** https://tiev84.github.io/blue-flower-field/
 
 ## Điều khiển
-- Máy tính: WASD / phím mũi tên để đi (Shift đi nhanh), kéo chuột để xoay camera, cuộn để zoom, E hoặc bấm vào mèo để vuốt ve.
-- Điện thoại: kéo nửa trái màn hình để đi, kéo nửa phải để xoay camera, chạm vào mèo (hoặc nút 🐾) để vuốt ve.
+- Máy tính: W/S đi tới/lùi (Shift đi nhanh), A/D xoay người, C (hoặc nút 🔄) để nhìn mặt trước, cuộn để zoom, E hoặc bấm vào mèo để vuốt ve.
+- Điện thoại: kéo nửa trái màn hình để đi và xoay, nút 🔄 để nhìn mặt trước, chạm vào mèo (hoặc nút 🐾) để vuốt ve.
+- Camera luôn nhìn sau lưng hoặc chính diện nhân vật.
 
 ## Chạy trên máy
 ```
@@ -25,6 +26,7 @@ Không cần build: three.js 0.170 tải qua importmap từ jsDelivr.
 
 ## Ghi công
 Model 3D lấy từ Sketchfab, đã chuyển đổi và giảm lưới cho nhẹ:
-- Animation đi bộ: "Pisculli-WalkAnimation" – eapisculli (CC BY 4.0)
+- Animation đi bộ: "character girl animated walk" (Sketchfab) – đoạn đi bộ trích từ Take 001; bản cũ: "Pisculli-WalkAnimation" – eapisculli (CC BY 4.0)
+- Hoa trên cánh đồng: một bông của bó hoa, giảm còn ~70 tam giác
 - Ngôi nhà nhỏ, bó hoa, mèo Munchkin, tượng mèo, Maxwell the cat – theo tác giả gốc trên Sketchfab
 - Tiếng mèo kêu: "Cat meow sound effect" – RazendeGijs
