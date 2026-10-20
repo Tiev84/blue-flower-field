@@ -358,7 +358,7 @@ export function buildGirl(walk) {
 }
 
 // ---------------------------------------------------------------- animation
-const _q = new THREE.Quaternion(), _q2 = new THREE.Quaternion();
+const _q = new THREE.Quaternion(), _q2 = new THREE.Quaternion(), _q3 = new THREE.Quaternion();
 const idle = {};
 // relaxed standing: arms hang by the sides (bind pose has them 34 degrees out)
 idle.armL = new THREE.Quaternion().setFromEuler(new THREE.Euler(0.05, 0, -0.92));
@@ -368,14 +368,16 @@ idle.foreR = new THREE.Quaternion().setFromEuler(new THREE.Euler(-0.15, -0.1, 0.
 
 const AMP = { thighL: 1.35, thighR: 1.35, shinL: 1.25, shinR: 1.25, armL: 1.3, armR: 1.3, foreL: 1.2, foreR: 1.2 };
 
-class GirlRig {
-  constructor(root, mesh, bones, walk) {
+export class GirlRig {
+  constructor(root, mesh, bones, walk, opts = {}) {
+    this.opts = opts;
+    this.parent = Object.fromEntries(walk.bones.map((b) => [b[0], b[1]]));
     this.root = root; this.mesh = mesh; this.bones = bones; this.walk = walk;
     this.T = walk.times[walk.times.length - 1]; this.phase = 0; this.blend = 0; this.time = 0;
     this.names = walk.bones.map((b) => b[0]);
     this.q = Object.fromEntries(this.names.map((n) => [n, walk.q[n].map((a) => new THREE.Quaternion(a[0], a[1], a[2], a[3]))]));
     this.hipsY = bones.hips.position.y;
-    bones.head.scale.setScalar(1.12); // a slightly bigger head reads cuter
+    bones.head.scale.setScalar(opts.headScale || 1.12); // a slightly bigger head reads cuter
     // markers under the soles to keep the lowest foot on the ground
     this.markers = [];
     for (const s of ['L', 'R']) {
@@ -390,7 +392,17 @@ class GirlRig {
     const ts = this.walk.times; t = ((t % this.T) + this.T) % this.T;
     let i = 0; while (i < ts.length - 2 && ts[i + 1] < t) i++;
     const f = (t - ts[i]) / Math.max(1e-6, ts[i + 1] - ts[i]);
-    for (const n of this.names) out[n] = (out[n] || new THREE.Quaternion()).copy(this.q[n][i]).slerp(this.q[n][i + 1], Math.min(1, Math.max(0, f)));
+    for (const n of this.names) {
+      out[n] = (out[n] || new THREE.Quaternion()).copy(this.q[n][i]).slerp(this.q[n][i + 1], Math.min(1, Math.max(0, f)));
+      const amp = AMP[n] || 1; if (amp !== 1) out[n].copy(_q3.identity().slerp(out[n], amp));
+    }
+    // a bind pose that differs from the capture's (arms hanging instead of
+    // out at 34 degrees): local' = conj(Q parent) * local * Q bone
+    const Q = this.opts.Q;
+    if (Q) for (const n of this.names) {
+      const qb = Q[n], qp = Q[this.parent[n]];
+      if (qb || qp) { const o = out[n]; if (qp) o.premultiply(_q3.copy(qp).invert()); if (qb) o.multiply(qb); }
+    }
     return out;
   }
   measureStride() {
@@ -398,7 +410,7 @@ class GirlRig {
     const pose = {}; let prev = null; let dist = 0; let n = 0; const p = new THREE.Vector3();
     for (let k = 0; k <= 120; k++) {
       this.sample((k / 120) * this.T, pose);
-      for (const nm of this.names) this.bones[nm].quaternion.identity().slerp(pose[nm], AMP[nm] || 1);
+      for (const nm of this.names) this.bones[nm].quaternion.copy(pose[nm]);
       this.root.updateMatrixWorld(true);
       this.bones.footL.getWorldPosition(p);
       if (prev && p.y < 0.13) { dist += Math.max(0, prev - p.z); n++; }
@@ -416,13 +428,11 @@ class GirlRig {
     const br = Math.sin(this.time * 2.2);
     for (const n of this.names) {
       const b = this.bones[n];
-      _q.copy(idle[n] || _q2.identity());
+      _q.copy((this.opts.idle || idle)[n] || _q2.identity());
       if (n === 'chest') _q.multiply(_q2.setFromAxisAngle(new THREE.Vector3(1, 0, 0), br * 0.012));
       if (n === 'head') _q.multiply(_q2.setFromEuler(new THREE.Euler(Math.sin(this.time * 0.7) * 0.03, Math.sin(this.time * 0.45) * 0.06, 0)));
       if (n === 'hairA' || n === 'hairB') _q.multiply(_q2.setFromAxisAngle(new THREE.Vector3(1, 0, 0), -Math.sin(this.time * 1.3) * 0.02));
-      const amp = AMP[n] || 1;
-      if (amp !== 1) _q2.identity().slerp(pose[n], amp); else _q2.copy(pose[n]);
-      b.quaternion.copy(_q).slerp(_q2, this.blend);
+      b.quaternion.copy(_q).slerp(pose[n], this.blend);
     }
     // keep the lowest sole on the ground
     const h = this.bones.hips; h.position.y = this.hipsY;

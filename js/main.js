@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { buildGirl } from './girl.js';
+import { buildLacNhu } from './lacnhu.js';
 import { createSky, createGround, createFlowers, createRoad, createSign, createPollen, SKY, ROAD } from './field.js';
 import { createHouse, DOOR_X, DOOR_FRONT } from './house.js';
 import { createCats } from './cats.js';
@@ -75,7 +76,8 @@ async function load() {
   ];
   setBar(0.2);
   const walk = await (await fetch('models/walk.json')).json();
-  const girl = buildGirl(walk);
+  let girl;
+  try { girl = await buildLacNhu(walk); } catch (e) { console.warn('photo model unavailable, using the cartoon one', e); girl = buildGirl(walk); }
   scene.add(girl.root);
   setBar(0.35);
   const house = await createHouse(scene, gltf);
@@ -130,6 +132,16 @@ function placeLabels() {
     b.el.style.left = ((_v.x + 1) / 2) * innerWidth + 'px'; b.el.style.top = ((1 - _v.y) / 2) * innerHeight + 'px';
     b.el.style.display = _v.z < 1 ? '' : 'none';
   }
+}
+// her name floats above her head
+const nameTag = document.createElement('div'); nameTag.className = 'name-tag'; nameTag.textContent = 'Lạc Như';
+$('labels').appendChild(nameTag);
+function placeNameTag() {
+  if (!world.girl || game.state === 'intro') { nameTag.style.display = 'none'; return; }
+  _v.copy(player.pos); _v.y += (world.girl.headTop || 1.6) + 0.17; _v.project(camera);
+  const hidden = _v.z > 1 || game.ended && !$('finale').classList.contains('hidden');
+  nameTag.style.display = hidden ? 'none' : '';
+  nameTag.style.left = ((_v.x + 1) / 2) * innerWidth + 'px'; nameTag.style.top = ((1 - _v.y) / 2) * innerHeight + 'px';
 }
 const flash = document.createElement('div');
 Object.assign(flash.style, { position: 'fixed', inset: '0', background: '#fff8ea', opacity: '0', pointerEvents: 'none', zIndex: '9', transition: 'opacity 0.35s' });
@@ -319,6 +331,7 @@ function step(dt) {
   sun.position.copy(player.pos).addScaledVector(SUN_DIR, 30); sun.target.position.copy(player.pos);
   hemi.intensity = H.state.inside ? 1.45 : 1.25;
   placeLabels();
+  placeNameTag();
 }
 
 // frame-rate watchdog: drop resolution on slow phones

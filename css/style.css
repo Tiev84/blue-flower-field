@@ -79,3 +79,8 @@ h1 { margin: 4px 0 6px; font-size: clamp(30px, 8vw, 40px); line-height: 1.05; co
 .f-text { font-size: clamp(18px, 5vw, 22px); font-weight: 700; margin: 0 0 14px; color: var(--ink); }
 .f-row { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
 .f-row .btn { padding: 11px 24px; font-size: 16px; }
+
+.name-tag { position: absolute; transform: translate(-50%, -100%); font-weight: 800; font-size: 15px; color: #fff; letter-spacing: 0.2px;
+  background: linear-gradient(180deg, rgba(243, 140, 182, 0.92), rgba(222, 104, 152, 0.92)); padding: 3px 12px 4px; border-radius: 99px;
+  box-shadow: 0 4px 12px rgba(150, 40, 90, 0.25); white-space: nowrap; pointer-events: none; }
+.name-tag::before { content: '♥ '; font-size: 11px; opacity: 0.9; }

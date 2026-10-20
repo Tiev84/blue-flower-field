@@ -1,6 +1,6 @@
-# Blue Flower Field
+# Lạc Như Simulator
 
-Một game web 3D nhỏ, chơi trên máy tính và điện thoại: dạo bước trên cánh đồng hoa xanh bất tận,
+Một game web 3D nhỏ, chơi trên máy tính và điện thoại: cùng Lạc Như dạo bước trên cánh đồng hoa xanh bất tận,
 đi theo biển chỉ dẫn tới ngôi nhà nhỏ, vuốt ve ba chú mèo và nhận một bó hoa xanh.
 
 **Chơi ngay:** https://tiev84.github.io/blue-flower-field/
@@ -17,7 +17,8 @@ Không cần build: three.js 0.170 tải qua importmap từ jsDelivr.
 
 ## Cấu trúc
 - `js/field.js` – bầu trời, mây, mặt đất, hoa và cỏ instanced chạy theo người chơi trên GPU, con đường, biển chỉ dẫn.
-- `js/girl.js` – nhân vật dựng bằng code (theo ảnh mẫu), skinning lên bộ xương gọn; animation đi bộ retarget từ file Pisculli.
+- `js/lacnhu.js` – Lạc Như: lưới 'visual hull' dựng từ bóng ảnh trước/bên (công cụ `tools/lacnhu.py`), ảnh gốc chiếu lại làm texture, skinning lên bộ xương gọn.
+- `js/girl.js` – bộ xương + animation đi bộ retarget từ file Pisculli (và nhân vật hoạt hình dự phòng).
 - `js/house.js` – ngôi nhà (chuyển từ casa.blend), cửa mở, nội thất, va chạm.
 - `js/cats.js`, `js/finale.js` – ba chú mèo, tia sáng và bó hoa.
 - `models/walk.json` – xoay xương theo thời gian của animation đi bộ.
