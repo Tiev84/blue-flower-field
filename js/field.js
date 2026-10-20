@@ -312,7 +312,7 @@ function signTexture(lines, w = 512, h = 160) {
   for (let y = 0; y < h; y += 26) { g.fillStyle = y % 52 ? '#9c6f46' : '#b4855a'; g.fillRect(0, y, w, 24); }
   g.strokeStyle = '#7a5434'; g.lineWidth = 10; g.strokeRect(5, 5, w - 10, h - 10);
   g.fillStyle = '#fff8ec'; g.textAlign = 'center'; g.textBaseline = 'middle';
-  const sizes = lines.length > 1 ? [54, 34] : [60];
+  const sizes = lines.length > 1 ? [62, 40] : [66];
   lines.forEach((t, i) => { g.font = `800 ${sizes[i]}px 'Baloo 2', system-ui, sans-serif`; g.fillText(t, w / 2, lines.length > 1 ? (i === 0 ? h * 0.4 : h * 0.76) : h / 2); });
   const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; return t;
 }
@@ -321,20 +321,20 @@ function signTexture(lines, w = 512, h = 160) {
 export function createSign(scene, x, z, lines, opts = {}) {
   const grp = new THREE.Group(); grp.position.set(x, 0, z);
   const wood = new THREE.MeshLambertMaterial({ color: '#8a5d39' });
-  const post = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.08, 1.9, 8), wood); post.position.y = 0.95; post.castShadow = true; grp.add(post);
+  const post = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.09, 2.2, 8), wood); post.position.y = 1.1; post.castShadow = true; grp.add(post);
   const tex = signTexture(lines);
   // arrow-shaped wooden board pointing to -z, with the words on both faces
   const shape = new THREE.Shape();
-  const W = 1.5, Hh = 0.24;
+  const W = 1.95, Hh = 0.32;
   shape.moveTo(-W / 2, -Hh); shape.lineTo(W / 2 - 0.25, -Hh); shape.lineTo(W / 2, 0); shape.lineTo(W / 2 - 0.25, Hh); shape.lineTo(-W / 2, Hh); shape.closePath();
   const bg = new THREE.ExtrudeGeometry(shape, { depth: 0.06, bevelEnabled: false }); bg.translate(0, 0, -0.03);
   const board = new THREE.Mesh(bg, new THREE.MeshLambertMaterial({ color: '#a8794e' })); board.castShadow = true;
-  const holder = new THREE.Group(); holder.position.y = 1.55; holder.rotation.y = opts.flip ? -Math.PI / 2 : Math.PI / 2; holder.add(board);
+  const holder = new THREE.Group(); holder.position.y = 1.8; holder.rotation.y = opts.flip ? -Math.PI / 2 : Math.PI / 2; holder.add(board);
   const text = new THREE.MeshLambertMaterial({ map: tex });
   for (const side of [1, -1]) {
-    const pl = new THREE.Mesh(new THREE.PlaneGeometry(W - 0.32, Hh * 2 - 0.04), text);
-    pl.position.set(-0.11, 0, side * 0.032); if (side < 0) pl.rotation.y = Math.PI;
-    if (side < 0) pl.position.x = -0.11; // same spot; the text stays readable from behind
+    const pl = new THREE.Mesh(new THREE.PlaneGeometry(W - 0.36, Hh * 2 - 0.05), text);
+    pl.position.set(-0.13, 0, side * 0.032); if (side < 0) pl.rotation.y = Math.PI;
+    if (side < 0) pl.position.x = -0.13; // same spot; the text stays readable from behind
     holder.add(pl);
   }
   grp.add(holder);
