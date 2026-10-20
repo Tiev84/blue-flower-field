@@ -24,54 +24,24 @@ const CLEAR_GLSL = /* glsl */`
   }
 `;
 
-export function createSky(scene) {
-  const geo = new THREE.SphereGeometry(450, 32, 16);
-  const mat = new THREE.ShaderMaterial({
-    side: THREE.BackSide, depthWrite: false, fog: false,
-    uniforms: { top: { value: SKY.top }, mid: { value: SKY.mid }, horizon: { value: SKY.horizon }, sun: { value: new THREE.Vector3(0.4, 0.55, -0.73).normalize() } },
-    vertexShader: `varying vec3 vDir; void main(){ vDir = normalize(position); vec4 p = projectionMatrix * modelViewMatrix * vec4(position,1.); gl_Position = p.xyww; }`,
-    fragmentShader: `uniform vec3 top, mid, horizon, sun; varying vec3 vDir;
-      void main(){ float h = max(vDir.y, 0.0);
-        vec3 c = mix(horizon, mid, smoothstep(0.0, 0.18, h)); c = mix(c, top, smoothstep(0.15, 0.75, h));
-        float s = max(dot(normalize(vDir), sun), 0.0); c += vec3(1.0,0.95,0.8) * (pow(s, 40.0) * 0.6 + pow(s, 6.0) * 0.12);
-        if (vDir.y < 0.0) c = horizon;
-        gl_FragColor = vec4(c, 1.0); }`,
-  });
+// sky: the anime skybox (an equirectangular panorama, cropped just below the
+// horizon), turned so its sun sits where the game's sunlight comes from
+const SKY_CROP = 0.56;          // the picture keeps the top 56% of the panorama
+const SKY_SUN = [0.81, 0.85];   // the panorama's sun: u across, v up (1 = top)
+export function createSky(scene, quality, sunDir) {
+  const tex = new THREE.TextureLoader().load(quality === 'low' ? 'models/sky_lo.jpg' : 'models/sky_hi.jpg');
+  tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 4;
+  const R = 480, thetaLen = Math.PI * SKY_CROP;
+  const geo = new THREE.SphereGeometry(R, 64, 24, 0, Math.PI * 2, 0, thetaLen);
+  const mat = new THREE.MeshBasicMaterial({ map: tex, side: THREE.BackSide, depthWrite: false, fog: false });
   const sky = new THREE.Mesh(geo, mat); sky.renderOrder = -10; sky.frustumCulled = false;
+  // where the panorama's sun points before turning
+  const phi = SKY_SUN[0] * Math.PI * 2, th = (1 - SKY_SUN[1]) * Math.PI;
+  const sl = new THREE.Vector3(-Math.cos(phi) * Math.sin(th), Math.cos(th), Math.sin(phi) * Math.sin(th));
+  sky.rotation.y = Math.atan2(sunDir.x, sunDir.z) - Math.atan2(sl.x, sl.z);
   scene.add(sky);
-
-  // fluffy clouds: clumps of flattened spheres with a soft blue underside
-  const cloudMat = new THREE.MeshLambertMaterial({ color: '#ffffff', emissive: '#cfe0f7', emissiveIntensity: 0.55, fog: false });
-  const clouds = new THREE.Group();
-  const rnd = mulberry(7);
-  const base = new THREE.IcosahedronGeometry(1, 2);
-  const parts = [];
-  for (let i = 0; i < 16; i++) {
-    const a = rnd() * Math.PI * 2, d = 230 + rnd() * 150, h = 45 + rnd() * 70;
-    const cx = Math.cos(a) * d, cz = Math.sin(a) * d, s = 9 + rnd() * 10;
-    const n = 6 + Math.floor(rnd() * 5);
-    for (let k = 0; k < n; k++) {
-      const g = base.clone();
-      const r = s * (0.55 + rnd() * 0.6) * (k === 0 ? 1.3 : 1);
-      const ox = (rnd() - 0.5) * s * 3.4, oy = rnd() * s * 0.6, oz = (rnd() - 0.5) * s * 1.2;
-      g.scale(r * 1.15, r * 0.8, r); g.translate(cx + ox, h + oy, cz + oz);
-      parts.push(g);
-    }
-  }
-  // a low bank of clouds sitting on the horizon
-  for (let i = 0; i < 22; i++) {
-    const a = (i / 22) * Math.PI * 2 + rnd() * 0.2, d = 470 + rnd() * 60, s = 14 + rnd() * 12;
-    const cx = Math.cos(a) * d, cz = Math.sin(a) * d;
-    for (let k = 0; k < 5; k++) {
-      const g = base.clone(); const r = s * (0.6 + rnd() * 0.6);
-      g.scale(r * 1.6, r * 0.75, r); g.translate(cx + (rnd() - 0.5) * s * 3, -r * 0.1 + rnd() * s * 0.35, cz + (rnd() - 0.5) * s * 1.5);
-      parts.push(g);
-    }
-  }
-  const cm = new THREE.Mesh(mergeGeometries(parts), cloudMat); cm.frustumCulled = false;
-  clouds.add(cm); scene.add(clouds);
   return {
-    update(dt, player) { sky.position.set(player.x, 0, player.z); clouds.position.set(player.x, 0, player.z); clouds.rotation.y += dt * 0.004; },
+    update(dt, player) { sky.position.x = player.x; sky.position.z = player.z; },
   };
 }
 
@@ -111,11 +81,12 @@ export function createGround(scene, uniforms) {
         vec3 c = mix(grass, petal, clamp(mix(0.15 + speck * 0.8, 0.86 + n * 0.1, far), 0.0, 1.0));
         // distance haze towards a soft blue, meeting the sky at the horizon
         float patchy = vnoise(p * 0.03) * 0.65 + vnoise(p * 0.11) * 0.35;
-        vec3 farc = mix(L(0.2, 0.34, 0.82), L(0.3, 0.46, 0.92), patchy);
-        farc = mix(farc, L(0.3, 0.48, 0.26), smoothstep(0.75, 0.92, vnoise(p * 0.05 + 3.0)) * 0.45);
+        vec3 farc = mix(L(0.4, 0.5, 0.9), L(0.52, 0.6, 0.95), patchy);
+        farc = mix(farc, L(0.34, 0.52, 0.36), smoothstep(0.72, 0.92, vnoise(p * 0.05 + 3.0)) * 0.35);
         c = mix(c, farc, smoothstep(14.0, 60.0, d) * 0.85);
-        // aerial perspective: the far field pales gently into the sky
-        c = mix(c, L(0.6, 0.72, 0.95), smoothstep(70.0, 680.0, d) * 0.85);
+        // aerial perspective: paler and a little greener towards the hills on the horizon
+        c = mix(c, L(0.72, 0.77, 0.94), smoothstep(18.0, 140.0, d) * 0.8);
+        c = mix(c, L(0.78, 0.86, 0.84), smoothstep(170.0, 690.0, d) * 0.85);
         float plot = step(abs(p.x), ${(HOUSE_CLEAR - 0.6).toFixed(2)}) * step(abs(p.y), ${(HOUSE_CLEAR - 0.6).toFixed(2)});
         c = mix(c, grass * 1.05, plot * (1.0 - far));
         vec4 diffuseColor = vec4( c, opacity );`);
@@ -158,7 +129,7 @@ function flowerGeometry() {
 function farFlowerGeometry() {
   // a cheap distant bloom: a pentagon head on a single ribbon
   const pos = [], col = [], nrm = [];
-  const blue = [0.04, 0.13, 0.7], light = [0.15, 0.34, 0.98], green = [0.05, 0.2, 0.04];
+  const blue = [0.1, 0.2, 0.75], light = [0.25, 0.4, 0.98], green = [0.05, 0.2, 0.04];
   for (let k = 0; k < 5; k++) {
     const a = (k / 5) * Math.PI * 2, b = ((k + 1) / 5) * Math.PI * 2;
     pos.push(0, 1.04, 0, Math.cos(b) * 0.4, 1, Math.sin(b) * 0.4, Math.cos(a) * 0.4, 1, Math.sin(a) * 0.4);
@@ -261,7 +232,7 @@ export function createFlowers(scene, uniforms, quality) {
   const fl = new THREE.Mesh(scatter(flowerGeometry(), flowerCount, tile, 11, [0.07, 0.11], [0.2, 0.42]), instancedMaterial(uniforms, 'flower'));
   const gr = new THREE.Mesh(scatter(grassGeometry(), grassCount, tile, 23, [0.6, 1.0], [0.16, 0.3]), instancedMaterial(uniforms, 'grass'));
   // a ring of cheap blooms farther out, so the carpet keeps its relief
-  const farTile = 130, nearR = tile * 0.36;
+  const farTile = 84, nearR = tile * 0.36;
   const far = new THREE.Mesh(scatter(farFlowerGeometry(), quality === 'low' ? 7000 : 12000, farTile, 31, [0.07, 0.1], [0.22, 0.38]), instancedMaterial(uniforms, 'far', farTile, [nearR - 2, nearR + 3]));
   for (const m of [fl, gr, far]) { m.frustumCulled = false; scene.add(m); }
   return { flowers: fl, grass: gr, far };

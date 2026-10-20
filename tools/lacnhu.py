@@ -18,6 +18,7 @@ D, WALK, OUT = sys.argv[1], sys.argv[2], sys.argv[3]
 H_M = 1.6           # character height in metres
 VOX = 0.005         # voxel size
 TARGET_TRIS = int(sys.argv[4]) if len(sys.argv) > 4 else 16000
+HAIR_DARK = 0.5
 
 def load(n):
     a = np.load(f'{D}/{n}_alpha.npy') > 127
@@ -182,6 +183,15 @@ for n in ['front', 'back', 'side']:
 AW = 2048
 atlas = Image.new('RGB', (AW, AH))
 for t, n in zip(tiles, crops): atlas.paste(t, (crops[n]['ox'], 0))
+# deepen the hair: dark, colourless pixels get darker (strands keep their contrast)
+A = np.asarray(atlas).astype(np.float32) / 255
+lum = A.mean(2); sat = A.max(2) - A.min(2)
+w = np.clip((0.5 - lum) / 0.18, 0, 1) * np.clip((0.16 - sat) / 0.07, 0, 1)
+w = nd.gaussian_filter(w, 1.5)
+k = 1 - HAIR_DARK * w
+A = A * k[..., None]
+A = A * (1 - 0.25 * w[..., None]) + (A.mean(2, keepdims=True) * 0.9) * 0.25 * w[..., None]  # a touch less brown
+atlas = Image.fromarray((np.clip(A, 0, 1) * 255).astype(np.uint8))
 atlas.save(f'{OUT}/lacnhu.jpg', quality=88)
 print('atlas width used', ox)
 def proj(n, h, y):

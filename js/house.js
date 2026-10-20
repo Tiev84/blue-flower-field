@@ -11,7 +11,7 @@ const w = (x, y, z) => new THREE.Vector3((x - ORIGIN.x) * S, (y - ORIGIN.y) * S 
 // key measurements (world units)
 const WALL = { x0: w(-0.2156, 0, 0).x, x1: w(1.4776, 0, 0).x, z0: w(0, 0, -0.5052).z, z1: w(0, 0, 1.3123).z, eave: w(0, 0.0, 0).y, ridge: w(0, 1.05, 0).y };
 const DOOR = { x0: w(0.3274, 0, 0).x, x1: w(0.9855, 0, 0).x, zBack: w(0, 0, 1.1737).z, zFront: w(0, 0, 1.2754).z, top: w(0, -0.4706, 0).y };
-export const PLOT = { half: (2.3582 + 1.0929) / 2 * S, top: LIFT };
+export const PLOT = { half: (2.3249 + 1.0596) / 2 * S, top: LIFT };
 const T = 0.28; // inner wall thickness
 export const ROOM = { x0: WALL.x0 + T, x1: WALL.x1 - T, z0: WALL.z0 + T, z1: DOOR.zBack, floor: LIFT + 0.01, eave: WALL.eave };
 export const CENTER = new THREE.Vector3((ROOM.x0 + ROOM.x1) / 2, ROOM.floor, (ROOM.z0 + ROOM.z1) / 2 - 0.15);

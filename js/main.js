@@ -27,7 +27,7 @@ $('stage').appendChild(renderer.domElement);
 
 const scene = new THREE.Scene();
 scene.background = SKY.horizon.clone();
-scene.fog = new THREE.Fog(new THREE.Color('#d4e6fb'), 45, 300);
+scene.fog = new THREE.Fog(new THREE.Color('#b9c8ee'), 18, 150);
 const camera = new THREE.PerspectiveCamera(55, innerWidth / innerHeight, 0.1, 900);
 
 const hemi = new THREE.HemisphereLight('#d6ebff', '#6f9a55', 1.25); scene.add(hemi);
@@ -62,7 +62,7 @@ const cam = { front: false, off: 0, yaw: 0, pitch: innerWidth < innerHeight ? 0.
 const game = { state: 'intro', petted: 0, enteredOnce: false, finaleAt: -1, time: 0, ended: false };
 
 async function load() {
-  const sky = createSky(scene);
+  const sky = createSky(scene, quality, SUN_DIR);
   const ground = createGround(scene, uniforms);
   const flowers = createFlowers(scene, uniforms, quality);
   const road = createRoad(scene);

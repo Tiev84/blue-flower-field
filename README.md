@@ -29,4 +29,5 @@ Model 3D lấy từ Sketchfab, đã chuyển đổi và giảm lưới cho nhẹ
 - Animation đi bộ: "character girl animated walk" (Sketchfab) – đoạn đi bộ trích từ Take 001; bản cũ: "Pisculli-WalkAnimation" – eapisculli (CC BY 4.0)
 - Hoa trên cánh đồng: một bông của bó hoa, giảm còn ~70 tam giác
 - Ngôi nhà nhỏ, bó hoa, mèo Munchkin, tượng mèo, Maxwell the cat – theo tác giả gốc trên Sketchfab
+- Bầu trời: "Free Skybox Anime Sky" (Sketchfab)
 - Tiếng mèo kêu: "Cat meow sound effect" – RazendeGijs
