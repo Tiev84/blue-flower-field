@@ -46,9 +46,9 @@ export async function createCats(scene, gltf, center) {
 
   // [model, size, size axis, facing of the model (radians, 0 = +z), meow pitch, name]
   const defs = [
-    { obj: normalise(munch.scene, 0.95, 'y'), face: 0, rate: 1.0, name: 'Munchkin' },
-    { obj: normalise(fig.scene, 1.0, 'xz'), face: -Math.PI / 2, rate: 1.18, name: 'Mochi' },
-    { obj: normalise(mx, 0.95, 'xz'), face: 0, rate: 0.88, name: 'Maxwell' },
+    { obj: normalise(munch.scene, 1.15, 'xz'), face: 0, rate: 1.0, name: 'Ba Màu' },
+    { obj: normalise(fig.scene, 1.0, 'xz'), face: -Math.PI / 2, rate: 1.18, name: 'Vàng' },
+    { obj: normalise(mx, 0.95, 'xz'), face: 0, rate: 0.88, name: 'Đen' },
   ];
   const heartTex = heartTexture();
   const cats = defs.map((d, i) => {
@@ -60,7 +60,9 @@ export async function createCats(scene, gltf, center) {
     // a soft ring on the floor shows which cat is in reach
     const ring = new THREE.Mesh(new THREE.RingGeometry(0.55, 0.68, 40), new THREE.MeshBasicMaterial({ color: '#ffffff', transparent: true, opacity: 0, depthWrite: false }));
     ring.rotation.x = -Math.PI / 2; ring.position.set(x, center.y + 0.02, z); scene.add(ring);
-    return { ...d, group: g, ring, petted: false, t: 10, phase: Math.random() * 6, pos: new THREE.Vector3(x, center.y, z), radius: 0.55 };
+    g.updateMatrixWorld(true);
+    const top = new THREE.Box3().setFromObject(d.obj).max.y - center.y;
+    return { ...d, group: g, ring, top, petted: false, t: 10, phase: Math.random() * 6, pos: new THREE.Vector3(x, center.y, z), radius: 0.55 };
   });
 
   const hearts = [];

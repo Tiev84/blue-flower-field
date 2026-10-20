@@ -138,7 +138,20 @@ function placeLabels() {
 // her name floats above her head
 const nameTag = document.createElement('div'); nameTag.className = 'name-tag'; nameTag.textContent = 'Lạc Như';
 $('labels').appendChild(nameTag);
+const catTags = [];
 function placeNameTag() {
+  // the cats' names, while she is inside with them
+  if (world.cats && !catTags.length) for (const c of world.cats.list) {
+    const el = document.createElement('div'); el.className = 'name-tag cat'; el.textContent = c.name; $('labels').appendChild(el); catTags.push({ el, c });
+  }
+  const cardUp = game.ended && !$('finale').classList.contains('hidden');
+  for (const { el, c } of catTags) {
+    const show = world.house && world.house.state.inside && !cardUp;
+    if (!show) { el.style.display = 'none'; continue; }
+    _v.copy(c.pos); _v.y += c.top + 0.22; _v.project(camera);
+    el.style.display = _v.z > 1 ? 'none' : '';
+    el.style.left = ((_v.x + 1) / 2) * innerWidth + 'px'; el.style.top = ((1 - _v.y) / 2) * innerHeight + 'px';
+  }
   if (!world.girl || game.state === 'intro') { nameTag.style.display = 'none'; return; }
   _v.copy(player.pos); _v.y += (world.girl.headTop || 1.6) + 0.17; _v.project(camera);
   const hidden = _v.z > 1 || game.ended && !$('finale').classList.contains('hidden');

@@ -209,14 +209,16 @@ part = lab_d[idx[0][ix, iy, iz], idx[1][ix, iy, iz], idx[2][ix, iy, iz]]
 
 # projection weights: front / back / side by normal, side damped where the arm hides the body
 nz, nx = N[:, 2], N[:, 0]
-wF = np.maximum(nz, 0) ** 3 + 0.02; wB = np.maximum(-nz, 0) ** 3 + 0.02; wS = np.abs(nx) ** 3 + 0.01
+# front vs back: a near-binary choice with a narrow blend at the flanks, so the
+# face never ghosts through the hair (and the hair never over the face)
+f = np.clip((nz + 0.18) / 0.36, 0, 1); f = f * f * (3 - 2 * f)
+# the profile photo only where the surface faces squarely sideways
+sS = np.clip((np.abs(nx) - 0.72) / 0.2, 0, 1)
 hidden = (part == 1) & (pv[:, 1] > crotch - 0.05) & (pv[:, 1] < SHOULDER_Y)
-wS = np.where(hidden, wS * 0.15, wS)
-# head and neck: the hull is as wide as the hair, so the profile photo would
-# paint a second face on its flank; let the front/back photos wrap round
+sS = np.where(hidden, sS * 0.15, sS)
 headz = pv[:, 1] > SHOULDER_Y - 0.04
-wS = np.where(headz, 0.0, wS)
-wS = np.where(N[:, 1] > 0.6, wS * 0.2, wS)
+sS = np.where(headz | (N[:, 1] > 0.6), 0.0, sS)
+wF = f * (1 - sS); wB = (1 - f) * (1 - sS); wS = sS
 W3 = np.stack([wF, wB, wS], 1); W3 /= W3.sum(1, keepdims=True)
 
 # ---------------------------------------------------------------- rig

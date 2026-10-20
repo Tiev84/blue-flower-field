@@ -86,3 +86,4 @@ h1 { margin: 4px 0 6px; font-size: clamp(30px, 8vw, 40px); line-height: 1.05; co
 
 .round.flip { top: calc(max(14px, env(safe-area-inset-top)) + 54px); font-size: 19px; }
 .round.flip.on { background: #fde3ec; }
+.name-tag.cat { font-size: 13px; padding: 2px 10px 3px; background: linear-gradient(180deg, rgba(255, 196, 92, 0.94), rgba(240, 160, 60, 0.94)); box-shadow: 0 4px 12px rgba(160, 90, 20, 0.25); }
