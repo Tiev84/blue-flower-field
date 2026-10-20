@@ -12,6 +12,9 @@ import { Input } from './input.js';
 const $ = (id) => document.getElementById(id);
 const touch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
 if (touch) document.body.classList.add('touch');
+// opened inside a chat app's browser, or in Safari rather than from the home screen
+const standalone = matchMedia('(display-mode: standalone)').matches || navigator.standalone;
+if (touch && !standalone) document.getElementById('inapp').classList.remove('hidden');
 const small = Math.min(screen.width, screen.height) < 820;
 const quality = touch && small ? 'low' : 'high';
 
@@ -106,7 +109,28 @@ $('start').addEventListener('click', async () => {
   audio.start();
   setQuest('Đi theo biển chỉ dẫn', 'Đến ngôi nhà nhỏ cuối con đường 🏡');
   toast(touch ? 'Kéo bên trái để đi · 🔄 để nhìn mặt Lạc Như' : 'W/S đi · A/D xoay · C để nhìn mặt Lạc Như', 3600);
+  guardBack();
 });
+
+// A swipe from the edge in in-app browsers (and Safari) means "go back", which
+// would close the game. Keep a few history entries of our own so that swipe
+// only steps back inside the page, and put them back each time.
+function guardBack() {
+  for (let i = 0; i < 3; i++) history.pushState({ lacnhu: i }, '', location.href);
+  addEventListener('popstate', () => {
+    if (game.ended && $('finale').classList.contains('hidden') === false) return;
+    history.pushState({ lacnhu: 'again' }, '', location.href);
+    toast('Vuốt nhẹ thôi nhé, game vẫn đang chơi 💙', 2200);
+  });
+}
+// no browser panning, pinch or rubber-banding over the game
+for (const ev of ['touchstart', 'touchmove']) {
+  document.addEventListener(ev, (e) => {
+    if (e.target.closest && e.target.closest('button, .card, .final-card')) return;
+    if (game.state !== 'intro' && e.cancelable) e.preventDefault();
+  }, { passive: false });
+}
+document.addEventListener('gesturestart', (e) => e.preventDefault());
 function flipView() { cam.front = !cam.front; $('flip').classList.toggle('on', cam.front); }
 $('flip').addEventListener('click', flipView);
 $('mute').addEventListener('click', () => { audio.setMuted(!audio.muted); $('mute').textContent = audio.muted ? '🔇' : '🔊'; });
@@ -242,7 +266,9 @@ const _ray = new THREE.Ray(), _hit = new THREE.Vector3(), _box = new THREE.Box3(
 function updateCamera(dt, ev) {
   const inside = world.house && world.house.state.inside;
   // the view is locked to her back (or her face): dragging only nudges it a little
-  cam.off = Math.max(-0.45, Math.min(0.45, (cam.off || 0) - ev.look.dx * 0.004));
+  // touch: dragging sideways turns her (the camera follows); mouse: a small look-around
+  if (touch) player.yaw -= ev.look.dx * 0.006;
+  else cam.off = Math.max(-0.45, Math.min(0.45, (cam.off || 0) - ev.look.dx * 0.004));
   if (!input.pointers.size) cam.off *= Math.max(0, 1 - dt * 0.8);
   const wantYaw = player.yaw + (cam.front ? 0 : Math.PI) + cam.off;
   let dy = wantYaw - cam.yaw; dy = Math.atan2(Math.sin(dy), Math.cos(dy));
