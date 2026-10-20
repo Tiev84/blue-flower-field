@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="theme-color" content="#8ec5ff" />
+  <title>Blue Flower Field</title>
+  <meta name="description" content="Dạo bước trên cánh đồng hoa xanh, tìm đến ngôi nhà nhỏ của ba chú mèo." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Dancing+Script:wght@600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💙</text></svg>" />
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+      }
+    }
+  </script>
+</head>
+<body>
+  <div id="stage"></div>
+
+  <section id="intro" class="screen">
+    <div class="card">
+      <div class="petals" aria-hidden="true">✿ ❀ ✿</div>
+      <h1>Blue Flower Field</h1>
+      <p class="sub">Một cánh đồng hoa xanh bất tận, một con đường thẳng và ngôi nhà nhỏ nơi ba chú mèo đang đợi.</p>
+      <div class="bar" id="bar"><div id="bar-fill"></div></div>
+      <p class="load" id="load-text">Đang gieo hạt hoa…</p>
+      <button id="start" class="btn" type="button" disabled>Bắt đầu</button>
+      <p class="keys" id="keys-desktop">WASD / mũi tên để đi · kéo chuột để xoay · E để vuốt ve mèo</p>
+      <p class="keys" id="keys-touch">Kéo bên trái để đi · kéo bên phải để xoay · chạm vào mèo</p>
+    </div>
+  </section>
+
+  <div id="hud" class="hidden">
+    <div id="quest" class="quest">
+      <div class="q-title" id="q-title">Đi theo biển chỉ dẫn</div>
+      <div class="q-text" id="q-text">Đến ngôi nhà nhỏ cuối con đường 🏡</div>
+      <div class="q-cats hidden" id="q-cats"><span data-i="0">🐱</span><span data-i="1">🐱</span><span data-i="2">🐱</span></div>
+    </div>
+    <button id="mute" class="round" type="button" aria-label="Tắt/bật âm thanh">🔊</button>
+    <div id="toast" class="toast"></div>
+    <button id="pet" class="pet hidden" type="button">🐾 Vuốt ve</button>
+    <div id="joy" class="joy hidden"><div id="joy-knob"></div></div>
+  </div>
+
+  <div id="labels"></div>
+
+  <section id="finale" class="screen hidden">
+    <div class="final-card">
+      <div class="f-flower" aria-hidden="true">💐</div>
+      <h2 class="f-title">Happy Women's Day</h2>
+      <p class="f-text">You are the most unique flower</p>
+      <div class="f-row">
+        <button id="admire" class="btn ghost" type="button">Ngắm bó hoa</button>
+        <button id="again" class="btn" type="button">Chơi lại</button>
+      </div>
+    </div>
+  </section>
+
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
