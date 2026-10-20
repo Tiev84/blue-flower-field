@@ -189,7 +189,7 @@ export function buildGirl(walk) {
     frame: new THREE.MeshToonMaterial({ color: COL.frame }),
     button: new THREE.MeshToonMaterial({ color: '#ffffff' }),
   };
-  const grad = new THREE.DataTexture(new Uint8Array([150, 150, 150, 255, 210, 210, 210, 255, 255, 255, 255, 255]), 3, 1);
+  const grad = new THREE.DataTexture(new Uint8Array([185, 185, 185, 255, 228, 228, 228, 255, 255, 255, 255, 255]), 3, 1);
   grad.minFilter = grad.magFilter = THREE.NearestFilter; grad.needsUpdate = true;
   for (const m of Object.values(mats)) m.gradientMap = grad;
 
@@ -375,6 +375,7 @@ class GirlRig {
     this.names = walk.bones.map((b) => b[0]);
     this.q = Object.fromEntries(this.names.map((n) => [n, walk.q[n].map((a) => new THREE.Quaternion(a[0], a[1], a[2], a[3]))]));
     this.hipsY = bones.hips.position.y;
+    bones.head.scale.setScalar(1.12); // a slightly bigger head reads cuter
     // markers under the soles to keep the lowest foot on the ground
     this.markers = [];
     for (const s of ['L', 'R']) {
